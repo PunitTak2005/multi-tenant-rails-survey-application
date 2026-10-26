@@ -24,7 +24,7 @@ class ValidationAuditTest < ActiveSupport::TestCase
   end
 
   test "User: rejects invalid email formats" do
-    ["invalid-email", "@no-user.com", "user@", "user @space.com"].each do |invalid_email|
+    [ "invalid-email", "@no-user.com", "user@", "user @space.com" ].each do |invalid_email|
       user = @customer.users.build(name: "User", email: invalid_email, password: "password123")
       assert_not user.valid?, "Expected #{invalid_email} to be invalid"
       assert_includes user.errors[:email], "is invalid"
@@ -70,7 +70,7 @@ class ValidationAuditTest < ActiveSupport::TestCase
   end
 
   test "Question: rejects invalid position numbers" do
-    [0, -1, 1.5].each do |bad_pos|
+    [ 0, -1, 1.5 ].each do |bad_pos|
       q = @survey.questions.build(question_text: "Text", position: bad_pos)
       assert_not q.valid?, "Expected position #{bad_pos} to be rejected"
     end
