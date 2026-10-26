@@ -1,0 +1,187 @@
+<%= form_with model: survey, local: true, data: { controller: "survey-builder" } do |f| %>
+  <% if survey.errors.any? %>
+    <div class="form-errors">
+      <h4><%= pluralize(survey.errors.count, "error") %> prohibited this survey from being saved:</h4>
+      <ul>
+        <% survey.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="card">
+    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;">Survey Details</h3>
+
+    <div class="form-group">
+      <%= f.label :title, "Survey Title", class: "form-label" do %>
+        Survey Title <span class="required-indicator">*</span>
+      <% end %>
+      <%= f.text_field :title, class: "form-control", placeholder: "e.g., Q3 Customer Satisfaction Survey", required: true %>
+    </div>
+
+    <div class="form-group">
+      <%= f.label :description, "Description / Instructions", class: "form-label" %>
+      <%= f.text_area :description, class: "form-control", rows: 3, placeholder: "Briefly explain the purpose of this survey for your respondents..." %>
+      <div class="form-hint">This text will be displayed at the top of the public survey page.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Survey Questions</h3>
+        <p class="card-subtitle">Add text, numeric, or multiple choice questions</p>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" data-action="click->survey-builder#addQuestion">
+        + Add Question
+      </button>
+    </div>
+
+    <div data-survey-builder-target="questionsContainer">
+      <%= f.fields_for :questions do |q_form| %>
+        <% q_index = q_form.index %>
+        <div class="builder-question-card">
+          <%= q_form.hidden_field :id %>
+          <%= q_form.hidden_field :_destroy %>
+
+          <div class="builder-question-header">
+            <span style="font-weight: 700; color: #475569; font-size: 0.9rem;">
+              Question #<%= q_form.object.position || (q_index.is_a?(Integer) ? q_index + 1 : 1) %>
+            </span>
+            <button type="button" class="btn btn-danger btn-sm" style="padding: 0.2rem 0.5rem;" data-action="click->survey-builder#removeQuestion">
+              Remove Question
+            </button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr 100px auto; gap: 1rem; align-items: end;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <%= q_form.label :question_text, "Question Text", class: "form-label" do %>
+                Question Text <span class="required-indicator">*</span>
+              <% end %>
+              <%= q_form.text_field :question_text, class: "form-control", placeholder: "e.g., How satisfied are you with our service?", required: true %>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <%= q_form.label :question_type, "Type", class: "form-label" %>
+              <%= q_form.select :question_type, [["Text", "text"], ["Number", "number"], ["Multiple Choice", "multiple_choice"]], {}, class: "form-control", data: { action: "change->survey-builder#handleTypeChange" } %>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <%= q_form.label :position, "Position", class: "form-label" %>
+              <%= q_form.number_field :position, class: "form-control", min: 1, required: true %>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0; padding-bottom: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; font-weight: 600; cursor: pointer;">
+                <%= q_form.check_box :required, style: "width: 1.1rem; height: 1.1rem; accent-color: var(--primary);" %>
+                Required
+              </label>
+            </div>
+          </div>
+
+          <div class="builder-options-section" style="margin-top: 1.25rem; display: <%= q_form.object.multiple_choice? ? 'block' : 'none' %>;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <label class="form-label" style="margin-bottom: 0;">Multiple Choice Options</label>
+              <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;" data-action="click->survey-builder#addOption">
+                + Add Option
+              </button>
+            </div>
+
+            <div class="builder-options-container" data-question-index="<%= q_index %>">
+              <%= q_form.fields_for :question_options do |opt_form| %>
+                <div class="builder-option-row" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                  <%= opt_form.hidden_field :id %>
+                  <%= opt_form.hidden_field :_destroy %>
+                  <%= opt_form.text_field :label, class: "form-control", placeholder: "Option label (e.g., Very satisfied)", style: "max-width: 320px;" %>
+                  <%= opt_form.number_field :position, class: "form-control", min: 1, style: "width: 70px;", title: "Order position" %>
+                  <button type="button" class="btn btn-danger btn-sm" style="padding: 0.35rem 0.6rem;" data-action="click->survey-builder#removeOption">✕</button>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 1rem; margin-top: 1.5rem; margin-bottom: 3rem;">
+    <%= f.submit survey.new_record? ? "Create Survey" : "Update Survey", class: "btn btn-primary", style: "padding: 0.75rem 1.75rem; font-size: 1rem;" %>
+    <%= link_to "Cancel", survey.new_record? ? surveys_path : survey_path(survey), class: "btn btn-secondary", style: "padding: 0.75rem 1.5rem;" %>
+  </div>
+
+  <%# Templates for Dynamic Javascript Builder %>
+  <template data-survey-builder-target="questionTemplate">
+    <div class="builder-question-card">
+      <input type="hidden" name="survey[questions_attributes][NEW_QUESTION_RECORD][_destroy]" value="0">
+
+      <div class="builder-question-header">
+        <span style="font-weight: 700; color: #475569; font-size: 0.9rem;">New Question</span>
+        <button type="button" class="btn btn-danger btn-sm" style="padding: 0.2rem 0.5rem;" data-action="click->survey-builder#removeQuestion">
+          Remove Question
+        </button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 2fr 1fr 100px auto; gap: 1rem; align-items: end;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Question Text <span class="required-indicator">*</span></label>
+          <input type="text" name="survey[questions_attributes][NEW_QUESTION_RECORD][question_text]" class="form-control" placeholder="Enter question..." required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Type</label>
+          <select name="survey[questions_attributes][NEW_QUESTION_RECORD][question_type]" class="form-control" data-action="change->survey-builder#handleTypeChange">
+            <option value="text">Text</option>
+            <option value="number">Number</option>
+            <option value="multiple_choice">Multiple Choice</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Position</label>
+          <input type="number" name="survey[questions_attributes][NEW_QUESTION_RECORD][position]" class="form-control" value="1" min="1" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0; padding-bottom: 0.5rem;">
+          <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; font-weight: 600; cursor: pointer;">
+            <input type="checkbox" name="survey[questions_attributes][NEW_QUESTION_RECORD][required]" value="1" style="width: 1.1rem; height: 1.1rem; accent-color: var(--primary);">
+            Required
+          </label>
+        </div>
+      </div>
+
+      <div class="builder-options-section" style="margin-top: 1.25rem; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <label class="form-label" style="margin-bottom: 0;">Multiple Choice Options</label>
+          <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;" data-action="click->survey-builder#addOption">
+            + Add Option
+          </button>
+        </div>
+
+        <div class="builder-options-container" data-question-index="NEW_QUESTION_RECORD">
+          <div class="builder-option-row" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+            <input type="hidden" name="survey[questions_attributes][NEW_QUESTION_RECORD][question_options_attributes][0][_destroy]" value="0">
+            <input type="text" name="survey[questions_attributes][NEW_QUESTION_RECORD][question_options_attributes][0][label]" class="form-control" placeholder="Option 1" style="max-width: 320px;">
+            <input type="number" name="survey[questions_attributes][NEW_QUESTION_RECORD][question_options_attributes][0][position]" class="form-control" value="1" min="1" style="width: 70px;">
+            <button type="button" class="btn btn-danger btn-sm" style="padding: 0.35rem 0.6rem;" data-action="click->survey-builder#removeOption">✕</button>
+          </div>
+          <div class="builder-option-row" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+            <input type="hidden" name="survey[questions_attributes][NEW_QUESTION_RECORD][question_options_attributes][1][_destroy]" value="0">
+            <input type="text" name="survey[questions_attributes][NEW_QUESTION_RECORD][question_options_attributes][1][label]" class="form-control" placeholder="Option 2" style="max-width: 320px;">
+            <input type="number" name="survey[questions_attributes][NEW_QUESTION_RECORD][question_options_attributes][1][position]" class="form-control" value="2" min="1" style="width: 70px;">
+            <button type="button" class="btn btn-danger btn-sm" style="padding: 0.35rem 0.6rem;" data-action="click->survey-builder#removeOption">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template data-survey-builder-target="optionTemplate">
+    <div class="builder-option-row" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+      <input type="hidden" name="survey[questions_attributes][QUESTION_INDEX][question_options_attributes][NEW_OPTION_RECORD][_destroy]" value="0">
+      <input type="text" name="survey[questions_attributes][QUESTION_INDEX][question_options_attributes][NEW_OPTION_RECORD][label]" class="form-control" placeholder="New option" style="max-width: 320px;">
+      <input type="number" name="survey[questions_attributes][QUESTION_INDEX][question_options_attributes][NEW_OPTION_RECORD][position]" class="form-control" value="1" min="1" style="width: 70px;">
+      <button type="button" class="btn btn-danger btn-sm" style="padding: 0.35rem 0.6rem;" data-action="click->survey-builder#removeOption">✕</button>
+    </div>
+  </template>
+<% end %>

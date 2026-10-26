@@ -1,0 +1,73 @@
+<% content_for :title, "#{@survey.title} - Feedback Survey" %>
+
+<div class="public-survey-wrapper">
+  <div class="public-survey-card">
+    <div style="margin-bottom: 2rem; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem;">
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">
+        <%= @survey.title %>
+      </h1>
+      <% if @survey.description.present? %>
+        <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.6;">
+          <%= @survey.description %>
+        </p>
+      <% end %>
+    </div>
+
+    <% if @errors.present? && @errors.any? %>
+      <div class="form-errors">
+        <h4>Please correct the following errors:</h4>
+        <ul>
+          <% @errors.each do |error| %>
+            <li><%= error %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <%= form_with url: submit_public_survey_path(@survey.public_token), method: :post, local: true do |f| %>
+      <div style="display: flex; flex-direction: column; gap: 1.75rem;">
+        <% @questions.each_with_index do |question, idx| %>
+          <div class="public-question-item">
+            <div class="public-question-title">
+              <span><%= idx + 1 %>.</span> <%= question.question_text %>
+              <% if question.required? %>
+                <span class="required-indicator" title="Required question">*</span>
+              <% end %>
+            </div>
+
+            <%# Render input matching question type %>
+            <% if question.text? %>
+              <div class="form-group" style="margin-bottom: 0;">
+                <textarea name="answers[<%= question.id %>]" class="form-control" rows="3" placeholder="Type your answer here..." <%= 'required' if question.required? %>><%= params.dig(:answers, question.id.to_s) %></textarea>
+              </div>
+
+            <% elsif question.number? %>
+              <div class="form-group" style="margin-bottom: 0;">
+                <input type="number" step="any" name="answers[<%= question.id %>]" value="<%= params.dig(:answers, question.id.to_s) %>" class="form-control" placeholder="Enter a number..." style="max-width: 250px;" <%= 'required' if question.required? %>>
+              </div>
+
+            <% elsif question.multiple_choice? %>
+              <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <% selected_opt_id = params.dig(:answers, question.id.to_s).to_s %>
+                <% question.question_options.each do |option| %>
+                  <label class="radio-option">
+                    <input type="radio" name="answers[<%= question.id %>]" value="<%= option.id %>" <%= 'checked' if selected_opt_id == option.id.to_s %> <%= 'required' if question.required? %>>
+                    <span style="font-size: 0.95rem; color: #334155;"><%= option.label %></span>
+                  </label>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <div style="margin-top: 2.25rem; text-align: center;">
+        <%= f.submit "Submit Survey", class: "btn btn-primary", style: "width: 100%; padding: 0.85rem; font-size: 1.05rem;" %>
+      </div>
+    <% end %>
+
+    <div style="text-align: center; margin-top: 1.75rem; font-size: 0.8rem; color: var(--text-muted);">
+      Powered by Multi-Tenant SurveyPlatform &bull; Secure and Anonymous Submissions
+    </div>
+  </div>
+</div>

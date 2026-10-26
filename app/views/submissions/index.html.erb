@@ -1,0 +1,72 @@
+<% content_for :title, "Submissions - #{@survey.title}" %>
+
+<div class="container">
+  <div style="margin-bottom: 1.5rem;">
+    <%= link_to "&larr; Back to #{@survey.title}".html_safe, survey_path(@survey), style: "color: var(--text-muted); text-decoration: none; font-size: 0.9rem;" %>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+      <div>
+        <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main);">Survey Responses</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Submissions for: <strong><%= @survey.title %></strong> (<%= @submissions.size %> total)</p>
+      </div>
+      <% if @survey.published? %>
+        <%= link_to "Open Public Survey", public_survey_path(@survey.public_token), target: "_blank", class: "btn btn-secondary btn-sm" %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card">
+    <% if @submissions.any? %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Submitted At</th>
+              <th>Answers Count</th>
+              <th>Sample Answers Preview</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @submissions.each do |submission| %>
+              <tr>
+                <td><strong>#<%= submission.id %></strong></td>
+                <td><%= submission.submitted_at.strftime("%b %d, %Y at %I:%M %p") %></td>
+                <td><%= submission.answers.size %> answers</td>
+                <td>
+                  <div style="font-size: 0.85rem; color: var(--text-muted); max-width: 450px;">
+                    <% preview_answers = submission.answers.first(2) %>
+                    <% preview_answers.each do |ans| %>
+                      <div><strong><%= ans.question.question_text.truncate(25) %>:</strong> <%= ans.display_value.presence || "—" %></div>
+                    <% end %>
+                    <% if submission.answers.size > 2 %>
+                      <span style="font-size: 0.75rem; color: #94a3b8;">+ <%= submission.answers.size - 2 %> more</span>
+                    <% end %>
+                  </div>
+                </td>
+                <td>
+                  <%= link_to "View Details &rarr;".html_safe, survey_submission_path(@survey, submission), class: "btn btn-primary btn-sm" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <div class="empty-state-icon">📥</div>
+        <h3>No responses yet</h3>
+        <p>This survey has not received any submissions yet.</p>
+        <% if @survey.published? %>
+          <p>Share your public survey link to collect responses:</p>
+          <div style="font-family: monospace; font-size: 0.9rem; margin-bottom: 1rem; color: var(--primary);">
+            <%= public_survey_url(@survey.public_token) %>
+          </div>
+          <%= link_to "Visit Public Survey", public_survey_path(@survey.public_token), target: "_blank", class: "btn btn-primary btn-sm" %>
+        <% else %>
+          <%= button_to "Publish Survey Now", publish_survey_path(@survey), method: :post, class: "btn btn-success btn-sm" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

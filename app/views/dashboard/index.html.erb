@@ -1,0 +1,100 @@
+<% content_for :title, "Dashboard - SurveyPlatform" %>
+
+<div class="container">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main);"><%= @customer.name %> Dashboard</h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.2rem;">Tenant overview and survey performance</p>
+    </div>
+    <div class="btn-group">
+      <%= link_to "+ Create New Survey", new_survey_path, class: "btn btn-primary" %>
+      <%= link_to "View Analytics", analytics_path, class: "btn btn-secondary" %>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Surveys</div>
+      <div class="stat-value"><%= @total_surveys %></div>
+      <div class="stat-desc"><%= @draft_surveys %> draft surveys</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Published Surveys</div>
+      <div class="stat-value" style="color: var(--success);"><%= @published_surveys %></div>
+      <div class="stat-desc">Live and accepting responses</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Total Submissions</div>
+      <div class="stat-value" style="color: var(--primary);"><%= @total_submissions %></div>
+      <div class="stat-desc">Across all customer surveys</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Recent Surveys</h2>
+        <p class="card-subtitle">Latest surveys created for <%= @customer.name %></p>
+      </div>
+      <%= link_to "View All Surveys &rarr;".html_safe, surveys_path, class: "btn btn-secondary btn-sm" %>
+    </div>
+
+    <% if @recent_surveys.any? %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Survey Title</th>
+              <th>Status</th>
+              <th>Questions</th>
+              <th>Submissions</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @recent_surveys.each do |survey| %>
+              <tr>
+                <td>
+                  <strong><%= link_to survey.title, survey_path(survey), style: "color: var(--text-main); text-decoration: none;" %></strong>
+                  <% if survey.description.present? %>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);"><%= truncate(survey.description, length: 60) %></div>
+                  <% end %>
+                </td>
+                <td>
+                  <span class="badge-status badge-<%= survey.status %>">
+                    <%= survey.status %>
+                  </span>
+                </td>
+                <td><%= survey.questions.size %></td>
+                <td>
+                  <%= link_to survey_submissions_path(survey), style: "color: var(--primary); font-weight: 600; text-decoration: none;" do %>
+                    <%= survey.submissions.size %> responses
+                  <% end %>
+                </td>
+                <td><%= survey.created_at.strftime("%b %d, %Y") %></td>
+                <td>
+                  <div class="btn-group">
+                    <%= link_to "View", survey_path(survey), class: "btn btn-secondary btn-sm" %>
+                    <% if survey.published? %>
+                      <%= link_to "Public URL", public_survey_path(survey.public_token), target: "_blank", class: "btn btn-secondary btn-sm", title: "Open public survey" %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <div class="empty-state-icon">📝</div>
+        <h3>No surveys yet</h3>
+        <p>Get started by creating your customer's first survey.</p>
+        <%= link_to "+ Create First Survey", new_survey_path, class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

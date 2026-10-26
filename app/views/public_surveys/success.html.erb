@@ -1,0 +1,23 @@
+<% content_for :title, "Thank You - Response Submitted" %>
+
+<div class="public-survey-wrapper">
+  <div class="public-survey-card success-card">
+    <div class="success-icon">✓</div>
+
+    <h1 style="font-size: 2rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.75rem;">
+      Thank you!
+    </h1>
+
+    <p style="font-size: 1.1rem; color: #334155; margin-bottom: 0.5rem;">
+      Your survey response has been submitted successfully.
+    </p>
+
+    <p style="font-size: 0.9rem; color: var(--text-muted); max-width: 480px; margin: 0 auto 2rem;">
+      We appreciate your valuable feedback for <strong><%= @survey.title %></strong>. Your responses have been securely recorded.
+    </p>
+
+    <div style="display: inline-flex; gap: 1rem;">
+      <%= link_to "Submit Another Response", public_survey_path(@survey.public_token), class: "btn btn-secondary btn-sm" %>
+    </div>
+  </div>
+</div>

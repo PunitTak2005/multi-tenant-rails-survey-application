@@ -1,0 +1,171 @@
+<% content_for :title, "Analytics - SurveyPlatform" %>
+
+<div class="container">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main);"><%= current_customer.name %> Analytics</h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.2rem;">
+        Survey response volume and activity over the last 90 days (<%= @start_date.strftime("%b %d, %Y") %> &ndash; <%= @end_date.strftime("%b %d, %Y") %>)
+      </p>
+    </div>
+    <div class="btn-group">
+      <%= link_to "Surveys List", surveys_path, class: "btn btn-secondary" %>
+      <%= link_to "+ New Survey", new_survey_path, class: "btn btn-primary" %>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total 90-Day Responses</div>
+      <div class="stat-value" style="color: var(--primary);"><%= @total_responses %></div>
+      <div class="stat-desc">Scoped to <%= current_customer.name %></div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Active Response Days</div>
+      <div class="stat-value"><%= @active_days_count %></div>
+      <div class="stat-desc">Days with at least 1 submission</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Daily Average</div>
+      <div class="stat-value" style="color: #0891b2;"><%= @average_daily_responses %></div>
+      <div class="stat-desc">Responses / day across 90 days</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Peak Activity Day</div>
+      <% if @peak_day %>
+        <div class="stat-value" style="color: var(--success);"><%= @peak_day[1] %> <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">responses</span></div>
+        <div class="stat-desc"><%= @peak_day[0].strftime("%B %d, %Y") %></div>
+      <% else %>
+        <div class="stat-value" style="color: var(--text-muted);">—</div>
+        <div class="stat-desc">No data yet</div>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @daily_responses.any? %>
+    <% max_count = @daily_responses.values.max %>
+
+    <%# Chart Section %>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Daily Response Volume (Past 90 Days)</h2>
+          <p class="card-subtitle">Visual timeline of respondent submissions</p>
+        </div>
+      </div>
+
+      <div style="padding: 1rem 0;">
+        <div class="chart-container">
+          <%# Show daily bars %>
+          <% (@start_date..@end_date).each do |date| %>
+            <% count = @daily_responses[date] || 0 %>
+            <% height_pct = max_count > 0 ? [(count.to_f / max_count * 100).round, 4].max : 4 %>
+            <div class="chart-bar-col" title="<%= date.strftime('%b %d, %Y') %>: <%= count %> responses">
+              <div class="chart-bar" style="height: <%= count > 0 ? height_pct : 2 %>%; <%= count > 0 ? '' : 'background: #e2e8f0;' %>"></div>
+            </div>
+          <% end %>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; padding: 0 0.5rem;">
+          <span><%= @start_date.strftime("%b %d, %Y") %></span>
+          <span>Timeline (90 Days)</span>
+          <span><%= @end_date.strftime("%b %d, %Y") %></span>
+        </div>
+      </div>
+    </div>
+
+    <%# Daily Responses Table %>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Survey Responses by Day</h2>
+          <p class="card-subtitle">Database-aggregated daily counts for <%= current_customer.name %></p>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 220px;">Date</th>
+              <th style="width: 140px;">Responses</th>
+              <th style="width: 140px;">% of Total</th>
+              <th>Distribution Bar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @daily_responses.each do |date, count| %>
+              <% pct = @total_responses > 0 ? ((count.to_f / @total_responses) * 100).round(1) : 0 %>
+              <% bar_pct = max_count > 0 ? ((count.to_f / max_count) * 100).round : 0 %>
+              <tr>
+                <td>
+                  <strong><%= date.strftime("%Y-%m-%d") %></strong>
+                  <span style="color: var(--text-muted); font-size: 0.8rem; margin-left: 0.35rem;">(<%= date.strftime("%A") %>)</span>
+                </td>
+                <td>
+                  <span style="font-weight: 700; font-size: 1rem; color: var(--text-main);"><%= count %></span>
+                </td>
+                <td>
+                  <span style="color: var(--text-muted);"><%= pct %>%</span>
+                </td>
+                <td>
+                  <div style="background: #f1f5f9; border-radius: 9999px; height: 10px; width: 100%; max-width: 300px; overflow: hidden;">
+                    <div style="background: var(--primary); height: 100%; width: <%= bar_pct %>%;"></div>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <%# Breakdown by Survey %>
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Responses by Survey</h2>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Survey Title</th>
+              <th>Status</th>
+              <th>Submissions</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @surveys_summary.each do |survey| %>
+              <tr>
+                <td><strong><%= survey.title %></strong></td>
+                <td>
+                  <span class="badge-status badge-<%= survey.status %>"><%= survey.status %></span>
+                </td>
+                <td><strong><%= survey.submissions_count %></strong> responses</td>
+                <td>
+                  <div class="btn-group">
+                    <%= link_to "View Survey", survey_path(survey), class: "btn btn-secondary btn-sm" %>
+                    <%= link_to "Submissions", survey_submissions_path(survey), class: "btn btn-secondary btn-sm" %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% else %>
+    <div class="card">
+      <div class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <h3>No response data in the last 90 days</h3>
+        <p>Once respondents complete your customer surveys, daily response analytics will be automatically calculated here.</p>
+        <%= link_to "View Surveys", surveys_path, class: "btn btn-primary" %>
+      </div>
+    </div>
+  <% end %>
+</div>

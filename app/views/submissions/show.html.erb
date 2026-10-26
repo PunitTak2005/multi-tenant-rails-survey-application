@@ -1,0 +1,64 @@
+<% content_for :title, "Submission ##{@submission.id} - #{@survey.title}" %>
+
+<div class="container-narrow">
+  <div style="margin-bottom: 1.5rem;">
+    <%= link_to "&larr; Back to Submissions".html_safe, survey_submissions_path(@survey), style: "color: var(--text-muted); text-decoration: none; font-size: 0.9rem;" %>
+    <div style="margin-top: 0.5rem;">
+      <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main);">Submission Details</h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Survey: <strong><%= @survey.title %></strong> &bull; Submitted on <strong><%= @submission.submitted_at.strftime("%B %d, %Y at %I:%M %p") %></strong>
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Responses (<%= @answers.size %>)</h2>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">Submission ID: #<%= @submission.id %></span>
+    </div>
+
+    <% if @answers.any? %>
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <% @answers.each_with_index do |ans, idx| %>
+          <div style="border-bottom: 1px solid var(--border); padding-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-weight: 700; color: #475569; font-size: 0.85rem; text-transform: uppercase;">
+                Question <%= idx + 1 %> &bull; <%= ans.question.question_type.humanize %>
+              </span>
+              <% if ans.question.required? %>
+                <span style="font-size: 0.7rem; color: #b91c1c; font-weight: 600;">REQUIRED</span>
+              <% end %>
+            </div>
+
+            <h3 style="font-size: 1.05rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.75rem;">
+              <%= ans.question.question_text %>
+            </h3>
+
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem 1rem;">
+              <% if ans.question.text? %>
+                <div style="font-size: 0.95rem; color: #1e293b; white-space: pre-wrap;"><%= ans.text_value.presence || content_tag(:em, "No response provided", style: "color: var(--text-muted);") %></div>
+              <% elsif ans.question.number? %>
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">
+                  <%= ans.number_value.presence || content_tag(:em, "No number provided", style: "color: var(--text-muted);") %>
+                </div>
+              <% elsif ans.question.multiple_choice? %>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="color: var(--success); font-weight: bold;">✔</span>
+                  <strong style="color: #1e293b; font-size: 1rem;"><%= ans.selected_option&.label || "No option selected" %></strong>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <p>No recorded answers for this submission.</p>
+      </div>
+    <% end %>
+
+    <div style="margin-top: 1.5rem; text-align: right;">
+      <%= link_to "Back to All Submissions", survey_submissions_path(@survey), class: "btn btn-secondary" %>
+    </div>
+  </div>
+</div>

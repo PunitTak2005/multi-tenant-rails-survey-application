@@ -1,0 +1,73 @@
+<% content_for :title, "Surveys - SurveyPlatform" %>
+
+<div class="container">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main);">Surveys</h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.2rem;">All surveys managed by <%= current_customer.name %></p>
+    </div>
+    <%= link_to "+ Create Survey", new_survey_path, class: "btn btn-primary" %>
+  </div>
+
+  <div class="card">
+    <% if @surveys.any? %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Questions</th>
+              <th>Submissions</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @surveys.each do |survey| %>
+              <tr>
+                <td>
+                  <strong><%= link_to survey.title, survey_path(survey), style: "color: var(--text-main); text-decoration: none;" %></strong>
+                  <% if survey.description.present? %>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);"><%= truncate(survey.description, length: 70) %></div>
+                  <% end %>
+                </td>
+                <td>
+                  <span class="badge-status badge-<%= survey.status %>">
+                    <%= survey.status %>
+                  </span>
+                </td>
+                <td><%= survey.questions.size %></td>
+                <td>
+                  <%= link_to survey_submissions_path(survey), style: "color: var(--primary); font-weight: 600; text-decoration: none;" do %>
+                    <%= survey.submissions.size %> responses
+                  <% end %>
+                </td>
+                <td><%= survey.created_at.strftime("%b %d, %Y") %></td>
+                <td>
+                  <div class="btn-group">
+                    <%= link_to "View", survey_path(survey), class: "btn btn-secondary btn-sm" %>
+                    <%= link_to "Edit", edit_survey_path(survey), class: "btn btn-secondary btn-sm" %>
+                    <% if survey.published? %>
+                      <%= link_to "Public URL", public_survey_path(survey.public_token), target: "_blank", class: "btn btn-secondary btn-sm", title: "Open public survey" %>
+                    <% else %>
+                      <%= button_to "Publish", publish_survey_path(survey), method: :post, class: "btn btn-success btn-sm", data: { turbo_confirm: "Are you sure you want to publish this survey? Once published, respondents can submit answers." } %>
+                    <% end %>
+                    <%= button_to "Delete", survey_path(survey), method: :delete, class: "btn btn-danger btn-sm", data: { turbo_confirm: "Are you sure you want to delete this survey and all its responses?" } %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <h3>No surveys found</h3>
+        <p>You haven't created any surveys yet for <%= current_customer.name %>.</p>
+        <%= link_to "+ Create Your First Survey", new_survey_path, class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

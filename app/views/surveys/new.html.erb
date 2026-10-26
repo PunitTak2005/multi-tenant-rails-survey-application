@@ -1,0 +1,11 @@
+<% content_for :title, "New Survey - SurveyPlatform" %>
+
+<div class="container">
+  <div style="margin-bottom: 1.5rem;">
+    <%= link_to "&larr; Back to Surveys".html_safe, surveys_path, style: "color: var(--text-muted); text-decoration: none; font-size: 0.9rem;" %>
+    <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-top: 0.5rem;">Create New Survey</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">Build a survey for your customer organization</p>
+  </div>
+
+  <%= render "form", survey: @survey %>
+</div>
