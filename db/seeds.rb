@@ -1,3 +1,10 @@
+# frozen_string_literal: true
+
+require "rake"
+
+# Use deterministic pseudorandom seed for reliable, repeatable demonstration data
+Kernel.srand(42)
+
 puts "==> Starting database seed process..."
 
 # Clear existing seed data cleanly in order of dependencies
@@ -126,6 +133,8 @@ beta_q2 = beta_survey.questions.create!(
 # 3. Seed Realistic Historical Submissions spread over 3 months
 puts "--> Generating historical submissions across past 90 days..."
 
+rng = Random.new(42)
+
 acme_options = [ opt_very_sat, opt_sat, opt_neutral, opt_unsat ]
 feedback_samples = [
   "Love the intuitive multi-tenant layout and swift loading speed.",
@@ -137,7 +146,7 @@ feedback_samples = [
 ]
 
 # Generate submissions for Acme Corporation
-submission_dates = (0..89).to_a.sample(50).sort.reverse # 50 distinct days with activity
+submission_dates = (0..89).to_a.sample(50, random: rng).sort.reverse # 50 distinct days with activity
 total_acme_submissions = 0
 
 submission_dates.each do |days_ago|
@@ -146,28 +155,28 @@ submission_dates.each do |days_ago|
   responses_today = (days_ago % 4) + 1
 
   responses_today.times do |i|
-    submitted_at = date + (i * 2).hours + rand(1..50).minutes
+    submitted_at = date + (i * 2).hours + rng.rand(1..50).minutes
     sub = acme_survey_1.submissions.create!(submitted_at: submitted_at)
 
     # Answer 1 (Multiple Choice)
-    selected = acme_options[rand(0..3)]
+    selected = acme_options[rng.rand(0..3)]
     sub.answers.create!(
       question: q1,
       selected_option: selected
     )
 
     # Answer 2 (Text, occasional blank)
-    if rand > 0.3
+    if rng.rand > 0.3
       sub.answers.create!(
         question: q2,
-        text_value: feedback_samples.sample
+        text_value: feedback_samples.sample(random: rng)
       )
     end
 
     # Answer 3 (Number)
     sub.answers.create!(
       question: q3,
-      number_value: BigDecimal(rand(1..25).to_s)
+      number_value: BigDecimal(rng.rand(1..25).to_s)
     )
 
     total_acme_submissions += 1
@@ -178,11 +187,11 @@ submission_dates.each do |days_ago|
     sub2 = acme_survey_2.submissions.create!(submitted_at: date + 4.hours)
     sub2.answers.create!(
       question: q2_1,
-      selected_option: [ opt_m1, opt_m2, opt_m3 ].sample
+      selected_option: [ opt_m1, opt_m2, opt_m3 ].sample(random: rng)
     )
     sub2.answers.create!(
       question: q2_2,
-      number_value: BigDecimal(rand(7..10).to_s)
+      number_value: BigDecimal(rng.rand(7..10).to_s)
     )
     total_acme_submissions += 1
   end
@@ -197,11 +206,11 @@ total_beta_submissions = 0
   sub = beta_survey.submissions.create!(submitted_at: date + 3.hours)
   sub.answers.create!(
     question: beta_q1,
-    selected_option: beta_options.sample
+    selected_option: beta_options.sample(random: rng)
   )
   sub.answers.create!(
     question: beta_q2,
-    number_value: BigDecimal(rand(2..50).to_s)
+    number_value: BigDecimal(rng.rand(2..50).to_s)
   )
   total_beta_submissions += 1
 end

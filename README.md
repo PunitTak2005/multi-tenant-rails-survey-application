@@ -97,11 +97,30 @@ bin/rails db:migrate
 
 ### 5. Seed Initial Data (Recommended)
 
-Generate realistic seed data featuring 2 separate customer tenants, users, surveys, questions, and historical submissions distributed across the last 90 days:
+Generate realistic, deterministic seed data featuring 2 separate customer tenants, users, surveys, questions across all types (Text, Number, Multiple Choice), and 157 historical submissions distributed across the last ~3 months (89 days) to fully demonstrate the Analytics page:
 
 ```bash
 bin/rails db:seed
 ```
+
+#### What gets generated:
+| Entity / Table | Count | Details |
+| :--- | :--- | :--- |
+| **`customers`** | 2 | `Acme Corporation` (primary tenant) & `Beta Technologies` (isolation verification tenant) |
+| **`users`** | 2 | `admin@acme.test` & `beta_admin@beta.test` (password: `ChangeMe123!`) |
+| **`surveys`** | 4 | Acme: 2 published (`acme-csat-2026`, `acme-product-eval`), 1 draft (`acme-draft-roadmap`); Beta: 1 published (`beta-onboarding-survey`) |
+| **`questions`** | 7 | Across all supported types: 3 Multiple Choice, 2 Numeric rating/metrics, 2 Freeform text |
+| **`question_options`** | 10 | Ordered options for multiple-choice questions (e.g. satisfaction ratings, module selections) |
+| **`submissions`** | 157 | Acme CSAT: 130 submissions; Acme Product Eval: 10 submissions; Beta Onboarding: 17 submissions |
+| **`answers`** | 403 | Strictly typed responses: 157 MC answers, 157 numeric answers, 89 realistic text feedbacks |
+| **`survey_daily_metrics`** | 77 | Pre-aggregated daily response counts automatically synchronized via `Rake::Task["analytics:backfill"]` |
+
+#### Seed Date Distribution & Analytics Readiness:
+- **Historical Span**: Spans 89 days (July 30, 2026 to October 27, 2026), satisfying the 3-month analytics requirement.
+- **Activity Cadence**: 56 distinct calendar dates with responses (1 to 6 responses per active day).
+- **Tenant Isolation**: Acme has 140 submissions and Beta has 17 submissions. Zero records cross tenant boundaries.
+- **Idempotency & Re-entrancy**: Seeds clean up existing records using foreign-key cascade order before regenerating deterministic data via a dedicated PRNG (`Random.new(42)`). Re-running `bin/rails db:seed` is completely safe.
+- **Automated Verification**: Run `bin/rails test test/models/seed_data_test.rb` (6 tests, 127 assertions).
 
 ### 6. Initial Customer & User Setup (Rake Tasks)
 
@@ -165,13 +184,13 @@ The database seed provides two separate customer tenants to demonstrate complete
 - **Login URL**: `http://localhost:3000/login`
 - **Email**: `admin@acme.test`
 - **Password**: `ChangeMe123!`
-- **Includes**: 3 surveys (2 published, 1 draft), multiple questions, and 125+ historical submissions.
+- **Includes**: 3 surveys (2 published, 1 draft), 5 questions, and 140 historical submissions across ~3 months.
 
 ### Customer Tenant B (Beta Technologies)
 - **Login URL**: `http://localhost:3000/login`
 - **Email**: `beta_admin@beta.test`
 - **Password**: `ChangeMe123!`
-- **Includes**: 1 survey and isolated submissions.
+- **Includes**: 1 published survey, 2 questions, and 17 historical submissions isolated to Beta.
 
 ---
 
