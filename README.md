@@ -6,6 +6,29 @@ The application allows organizational customers (tenants) to manage users, creat
 
 ---
 
+## Developer Documentation & Technical Reference Guides
+
+For technical interviews, design defenses, and deep architectural explanations, explore the complete documentation suite in [`docs/`](docs/):
+
+| Documentation Guide | Focus Area / Description |
+| :--- | :--- |
+| **[System Architecture](docs/ARCHITECTURE.md)** | Technical stack, component diagrams, architectural patterns, and trade-offs. |
+| **[Application Flows](docs/APPLICATION_FLOW.md)** | Complete end-to-end user journeys, sequence diagrams, and request lifecycles. |
+| **[Database Design & Defense](docs/DATABASE_DESIGN.md)** | Full ERD, normalization defense (1NF-3NF vs JSONB), foreign key matrix, index rationale. |
+| **[Class & Code Guide](docs/CLASS_AND_CODE_GUIDE.md)** | Class-by-class technical breakdown (models, controllers, services, jobs, JavaScript). |
+| **[Authentication & Authorization](docs/AUTHENTICATION_AND_AUTHORIZATION.md)** | BCrypt password hashing, session fixation defense, tenant scoping, and IDOR prevention. |
+| **[Survey Lifecycle & Question Engine](docs/SURVEY_LIFECYCLE.md)** | Survey state machine, nested attributes, Stimulus JS dynamic builder, and token generation. |
+| **[Public Submission Flow & Bot Defense](docs/PUBLIC_SUBMISSION_FLOW.md)** | Anonymous access, Rails 8 rate limiting, Turnstile CAPTCHA, signed cookies, and atomic transactions. |
+| **[Submissions & Responses](docs/SUBMISSIONS_AND_RESPONSES.md)** | Pagy 9 pagination, eager loading (zero N+1 queries), optional question handling, and IDOR defense. |
+| **[Analytics Architecture](docs/ANALYTICS_FLOW.md)** | Pre-aggregated daily metrics, atomic PostgreSQL UPSERTs, ActiveJob pipelines, and date filters. |
+| **[Seed Data & Synthetic Responses](docs/SEED_DATA.md)** | Deterministic seeding via `Random.new(42)`, 89-day historical distribution, and Rake tasks. |
+| **[Security & Threat Modeling](docs/SECURITY.md)** | Threat matrix, vulnerability assessment, Brakeman/Bundler-Audit results, and future improvements. |
+| **[Interview & Defense Guide](docs/INTERVIEW_GUIDE.md)** | Concise, technically deep answers to 19 core architectural and design interview questions. |
+| **[Project Cheat Sheet](docs/PROJECT_CHEATSHEET.md)** | Fast-lookup 1-page reference of tech stack, CLI commands, route tables, and credentials. |
+| **[End-to-End Code Walkthrough](docs/CODE_WALKTHROUGH.md)** | Step-by-step code trace from Login to Analytics with exact methods and SQL queries. |
+
+---
+
 ## Architecture Overview
 
 - **Framework**: Ruby on Rails 8.1.4 (Idiomatic Rails MVC, ActiveRecord, ERB, Propshaft, Stimulus & Turbo via Importmap).
