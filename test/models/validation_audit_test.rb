@@ -152,4 +152,57 @@ class ValidationAuditTest < ActiveSupport::TestCase
     assert ans_large.persisted?
     assert_equal BigDecimal("999999999.99"), ans_large.reload.number_value
   end
+
+  # --- Bot Defense & Response Limit Model Tests ---
+  test "Survey: limit_one_response_per_device defaults to false and validates inclusion" do
+    s = @customer.surveys.create!(title: "Default Survey")
+    assert_equal false, s.limit_one_response_per_device
+    assert_predicate s, :valid?
+
+    s.limit_one_response_per_device = true
+    assert_predicate s, :valid?
+
+    s.limit_one_response_per_device = nil
+    assert_not s.valid?
+    assert_includes s.errors[:limit_one_response_per_device], "is not included in the list"
+  end
+
+  test "Survey: respondent_token_digest computes consistent SHA256 scoped to survey_id" do
+    token = "test-token-12345"
+    digest_a = Survey.respondent_token_digest(@survey.id, token)
+    digest_b = Survey.respondent_token_digest(@survey.id, token)
+    assert_equal digest_a, digest_b
+    assert_equal 64, digest_a.length
+
+    # Scoped to survey_id: different survey gives different digest
+    other_survey = @customer.surveys.create!(title: "Other Survey")
+    other_digest = Survey.respondent_token_digest(other_survey.id, token)
+    assert_not_equal digest_a, other_digest
+
+    # Blank token or survey gives nil
+    assert_nil Survey.respondent_token_digest(nil, token)
+    assert_nil Survey.respondent_token_digest(@survey.id, "")
+  end
+
+  test "Submission: validates uniqueness of respondent_token_digest scoped to survey_id" do
+    digest = Digest::SHA256.hexdigest("#{@survey.id}:unique-token")
+    sub1 = @survey.submissions.create!(submitted_at: Time.current, respondent_token_digest: digest)
+    assert_predicate sub1, :persisted?
+
+    # Duplicate on same survey rejected
+    sub2 = @survey.submissions.build(submitted_at: Time.current, respondent_token_digest: digest)
+    assert_not sub2.valid?
+    assert_includes sub2.errors[:respondent_token_digest], "has already been taken"
+
+    # Same digest on different survey is allowed (cross-survey independence)
+    other_survey = @customer.surveys.create!(title: "Other Survey")
+    sub_other = other_survey.submissions.build(submitted_at: Time.current, respondent_token_digest: digest)
+    assert_predicate sub_other, :valid?
+
+    # Nil digests are always permitted for multiple anonymous submissions
+    sub_nil1 = @survey.submissions.create!(submitted_at: Time.current, respondent_token_digest: nil)
+    sub_nil2 = @survey.submissions.build(submitted_at: Time.current, respondent_token_digest: nil)
+    assert_predicate sub_nil1, :persisted?
+    assert_predicate sub_nil2, :valid?
+  end
 end

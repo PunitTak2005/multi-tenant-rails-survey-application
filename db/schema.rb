@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_27_120800) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -61,7 +61,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_120800) do
     t.datetime "submitted_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "respondent_token_digest"
     t.index ["submitted_at"], name: "index_submissions_on_submitted_at"
+    t.index ["survey_id", "respondent_token_digest"], name: "index_submissions_on_survey_and_respondent_digest", unique: true, where: "(respondent_token_digest IS NOT NULL)"
     t.index ["survey_id", "submitted_at"], name: "index_submissions_on_survey_id_and_submitted_at"
     t.index ["survey_id"], name: "index_submissions_on_survey_id"
   end
@@ -86,6 +88,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_120800) do
     t.datetime "published_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "limit_one_response_per_device", default: false, null: false
     t.index ["customer_id", "created_at"], name: "index_surveys_on_customer_id_and_created_at"
     t.index ["customer_id", "status"], name: "index_surveys_on_customer_id_and_status"
     t.index ["customer_id"], name: "index_surveys_on_customer_id"

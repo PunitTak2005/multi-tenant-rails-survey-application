@@ -65,6 +65,7 @@ class SurveysController < ApplicationController
     params.require(:survey).permit(
       :title,
       :description,
+      :limit_one_response_per_device,
       questions_attributes: [
         :id,
         :question_text,

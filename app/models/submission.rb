@@ -3,6 +3,7 @@ class Submission < ApplicationRecord
   has_many :answers, dependent: :destroy, inverse_of: :submission
 
   validates :submitted_at, presence: true
+  validates :respondent_token_digest, uniqueness: { scope: :survey_id, allow_nil: true }
 
   before_validation :set_submitted_at, on: :create
   after_commit :enqueue_daily_metric_update, on: :create

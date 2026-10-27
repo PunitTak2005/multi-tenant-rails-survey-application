@@ -14,8 +14,15 @@ class Survey < ApplicationRecord
   validates :title, presence: true
   validates :status, presence: true
   validates :public_token, presence: true, uniqueness: true
+  validates :limit_one_response_per_device, inclusion: { in: [ true, false ] }
 
   scope :recent, -> { order(created_at: :desc) }
+
+  def self.respondent_token_digest(survey_id, token)
+    return nil if token.blank? || survey_id.blank?
+
+    Digest::SHA256.hexdigest("#{survey_id}:#{token}")
+  end
 
   def publishable?
     errors.clear

@@ -28,6 +28,24 @@
   </div>
 
   <div class="card">
+    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Response Settings</h3>
+    <p class="form-hint" style="margin-bottom: 1rem;">Configure submission policies for this survey.</p>
+
+    <div class="form-group" style="margin-bottom: 0;">
+      <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+        <%= f.check_box :limit_one_response_per_device, style: "margin-top: 0.25rem; width: 1.15rem; height: 1.15rem; accent-color: var(--primary);" %>
+        <div>
+          <span style="font-weight: 600; font-size: 0.95rem; color: var(--text-main);">Limit to one response per device/browser</span>
+          <div class="form-hint" style="margin-top: 0.25rem; line-height: 1.5;">
+            When enabled, respondents using the same browser/device will not be able to submit this survey more than once.
+            This uses a privacy-preserving signed browser cookie and does not require respondent login or personal identification.
+          </div>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-header">
       <div>
         <h3 class="card-title">Survey Questions</h3>

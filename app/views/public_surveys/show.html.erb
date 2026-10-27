@@ -1,4 +1,9 @@
 <% content_for :title, "#{@survey.title} - Feedback Survey" %>
+<% if CaptchaVerifier.enabled? %>
+  <% content_for :head do %>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <% end %>
+<% end %>
 
 <div class="public-survey-wrapper">
   <div class="public-survey-card">
@@ -61,6 +66,12 @@
         <% end %>
       </div>
 
+      <% if CaptchaVerifier.enabled? %>
+        <div style="margin-top: 1.5rem; display: flex; justify-content: center;">
+          <div class="cf-turnstile" data-sitekey="<%= CaptchaVerifier.site_key %>"></div>
+        </div>
+      <% end %>
+
       <div style="margin-top: 2.25rem; text-align: center;">
         <%= f.submit "Submit Survey", class: "btn btn-primary", style: "width: 100%; padding: 0.85rem; font-size: 1.05rem;" %>
       </div>
@@ -68,6 +79,9 @@
 
     <div style="text-align: center; margin-top: 1.75rem; font-size: 0.8rem; color: var(--text-muted);">
       Powered by Multi-Tenant SurveyPlatform &bull; Secure and Anonymous Submissions
+      <% if @survey.limit_one_response_per_device? %>
+        &bull; <span>One response per device</span>
+      <% end %>
     </div>
   </div>
 </div>

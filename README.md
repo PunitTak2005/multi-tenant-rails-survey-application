@@ -380,6 +380,46 @@ When a limit is exceeded:
 
 ---
 
+## Bot Defense (Cloudflare Turnstile)
+
+Public surveys can be protected against automated bots, credential stuffing, and spam attacks using **Cloudflare Turnstile**.
+
+### 1. Configuration & Keys
+Turnstile keys are configured via environment variables:
+```bash
+TURNSTILE_SITE_KEY=your-turnstile-site-key
+TURNSTILE_SECRET_KEY=your-turnstile-secret-key
+```
+- **Local Development / Testing**: If `TURNSTILE_SECRET_KEY` is not set, CAPTCHA verification is safely bypassed, allowing developers and CI tests to run without external network dependencies.
+- **Production**: When `TURNSTILE_SECRET_KEY` is present, `CaptchaVerifier.enabled?` evaluates to `true`, automatically injecting the Turnstile widget into public surveys and verifying tokens server-side.
+
+### 2. Request Flow & Failure Behavior
+- **Verification Service**: Handled by `CaptchaVerifier.verify(token, remote_ip:)`.
+- **Fail Closed**: If Turnstile fails (e.g. invalid response, missing token, expired challenge, or network timeout), the submission is rejected (`HTTP 422`) with a user-friendly message (`"We couldn't verify that you're human. Please try again."`). Zero submission or answer records are created.
+- **Rate-Limiting Coordination**: IP rate limiting executes before CAPTCHA verification, preventing attackers from flooding external verification endpoints.
+- **Dashboard Isolation**: Customer dashboard actions (login, survey creation, editing) are never blocked by CAPTCHA.
+
+---
+
+## Device Response Limits (One Response Per Device)
+
+Survey creators can optionally restrict submissions to **one response per device/browser** without requiring respondents to log in.
+
+### 1. How It Works
+- **Survey Creator Toggle**: In the survey builder under **Response Settings**, creators check *"Limit to one response per device/browser"*.
+- **Default State**: Disabled by default (`limit_one_response_per_device: false`), preserving backwards compatibility for open public surveys.
+- **Signed Cookie Mechanism**: When enabled, the application sets a tamper-proof Rails signed cookie (`cookies.signed[:survey_respondent_token]`) with a cryptographically secure token on first submission.
+- **Database Unique Constraint**: A SHA-256 digest of the token scoped to the survey (`Digest::SHA256.hexdigest("#{survey.id}:#{token}")`) is stored on `submissions.respondent_token_digest`. A partial unique index (`index_submissions_on_survey_and_respondent_digest`) guarantees at the database level that concurrent race conditions from the same browser cannot create duplicate records.
+- **Friendly Rejection**: If the same browser attempts to submit again, it is blocked with:
+  > *"You have already submitted this survey from this browser."*
+
+### 2. Privacy & Limitations
+- **No Invasive Fingerprinting**: Does not collect canvas hashes, device serial numbers, or invasive telemetry.
+- **Device vs. Person**: Clearing browser cookies or opening an incognito window resets the client token context. The feature is accurately described as *"one response per device/browser"* rather than *"one response per human"*.
+- **Cross-Survey Independence**: A token issued for Survey A never blocks submission to Survey B.
+
+---
+
 ## Testing
 
 Run the full automated test suite:

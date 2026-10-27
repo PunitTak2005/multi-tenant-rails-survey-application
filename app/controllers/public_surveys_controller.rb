@@ -21,9 +21,41 @@ class PublicSurveysController < ApplicationController
 
   def submit
     @survey = Survey.published.find_by!(public_token: params[:public_token])
-    result = SubmitSurvey.new(@survey, params[:answers]).call
+
+    if CaptchaVerifier.enabled?
+      captcha_res = CaptchaVerifier.verify(params["cf-turnstile-response"], remote_ip: request.remote_ip)
+      unless captcha_res.success?
+        @errors = [ captcha_res.error_message || "We couldn't verify that you're human. Please try again." ]
+        flash.now[:alert] = @errors.first
+        @questions = @survey.questions.includes(:question_options)
+        return render :show, status: :unprocessable_entity
+      end
+    end
+
+    respondent_token = cookies.signed[:survey_respondent_token]
+    respondent_token ||= SecureRandom.hex(24)
+
+    respondent_token_digest = if @survey.limit_one_response_per_device?
+      Survey.respondent_token_digest(@survey.id, respondent_token)
+    end
+
+    if @survey.limit_one_response_per_device? && @survey.submissions.exists?(respondent_token_digest: respondent_token_digest)
+      @errors = [ "You have already submitted this survey from this browser." ]
+      flash.now[:alert] = @errors.first
+      @questions = @survey.questions.includes(:question_options)
+      return render :show, status: :unprocessable_entity
+    end
+
+    result = SubmitSurvey.new(@survey, params[:answers], respondent_token_digest: respondent_token_digest).call
 
     if result.success?
+      cookies.signed[:survey_respondent_token] = {
+        value: respondent_token,
+        httponly: true,
+        same_site: :lax,
+        secure: Rails.env.production?,
+        expires: 1.year.from_now
+      }
       redirect_to public_survey_success_path(@survey.public_token)
     else
       @errors = result.errors

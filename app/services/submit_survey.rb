@@ -1,9 +1,10 @@
 class SubmitSurvey
   Result = Struct.new(:success?, :submission, :errors, keyword_init: true)
 
-  def initialize(survey, answer_params)
+  def initialize(survey, answer_params, respondent_token_digest: nil)
     @survey = survey
     @answer_params = answer_params || {}
+    @respondent_token_digest = respondent_token_digest
   end
 
   def call
@@ -11,10 +12,22 @@ class SubmitSurvey
       return Result.new(success?: false, submission: nil, errors: [ "This survey is not published." ])
     end
 
+    if @survey.limit_one_response_per_device? && @respondent_token_digest.present? &&
+       @survey.submissions.exists?(respondent_token_digest: @respondent_token_digest)
+      return Result.new(
+        success?: false,
+        submission: nil,
+        errors: [ "You have already submitted this survey from this browser." ]
+      )
+    end
+
     submission = nil
 
     ActiveRecord::Base.transaction do
-      submission = @survey.submissions.build(submitted_at: Time.current)
+      submission = @survey.submissions.build(
+        submitted_at: Time.current,
+        respondent_token_digest: @respondent_token_digest
+      )
 
       @survey.questions.includes(:question_options).each do |question|
         raw_val = @answer_params[question.id.to_s]
@@ -52,7 +65,12 @@ class SubmitSurvey
         raise ActiveRecord::Rollback
       end
 
-      unless submission.save
+      begin
+        unless submission.save
+          raise ActiveRecord::Rollback
+        end
+      rescue ActiveRecord::RecordNotUnique
+        submission.errors.add(:base, "You have already submitted this survey from this browser.")
         raise ActiveRecord::Rollback
       end
     end
