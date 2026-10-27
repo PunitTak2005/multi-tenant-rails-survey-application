@@ -4,8 +4,14 @@ require "rails/test_help"
 
 module ActiveSupport
   class TestCase
+    include ActiveJob::TestHelper
+
     # Disable parallelization for stable local database testing
     parallelize(workers: 1)
+
+    setup do
+      Rails.cache.clear
+    end
 
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     # fixtures :all

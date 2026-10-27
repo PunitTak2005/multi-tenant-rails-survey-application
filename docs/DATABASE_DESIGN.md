@@ -17,9 +17,11 @@ Customer (Tenant Boundary)
         │     │
         │     └── QuestionOptions (For multiple-choice questions)
         │
-        └── Submissions (Anonymous public response sessions)
-              │
-              └── Answers (Normalized responses linked to Question & Submission)
+        ├── Submissions (Anonymous public response sessions)
+        │     │
+        │     └── Answers (Normalized responses linked to Question & Submission)
+        │
+        └── SurveyDailyMetrics (Pre-aggregated daily response counts for high-scale analytics)
 ```
 
 ---
@@ -92,6 +94,15 @@ Discrete, typed response values linked to both a `submission` and a specific `qu
 - `selected_option_id` (bigint, nullable, FK -> `question_options.id` ON DELETE SET NULL): Populated when `question_type` is `:multiple_choice`.
 - `created_at`, `updated_at` (timestamps)
 - **Indexes**: `[submission_id]`, `[question_id]`, `[selected_option_id]`, `[submission_id, question_id]`
+
+### `survey_daily_metrics`
+Pre-aggregated daily response counters ensuring instantaneous $O(\text{days})$ analytics dashboard response times under high-volume production datasets.
+- `id` (bigserial, primary key)
+- `survey_id` (bigint, NOT NULL, FK -> `surveys.id` ON DELETE CASCADE)
+- `date` (date, NOT NULL): The calendar date of the response bucket.
+- `response_count` (integer, NOT NULL, default: 0): Total completed submissions for the survey on that date.
+- `created_at`, `updated_at` (timestamps)
+- **Indexes**: `[survey_id, date]` (UNIQUE), `[date]`, `[survey_id]`
 
 ---
 

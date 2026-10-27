@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Too Many Requests (429)</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, width=device-width">
+    <meta name="robots" content="noindex, nofollow">
+    <style>
+      *, *::before, *::after {
+        box-sizing: border-box;
+      }
+      * {
+        margin: 0;
+      }
+      html {
+        font-size: 16px;
+      }
+      body {
+        background: #FFF;
+        color: #261B23;
+        display: grid;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Aptos, Roboto, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: clamp(1rem, 2.5vw, 2rem);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100dvh;
+        place-items: center;
+        text-rendering: optimizeLegibility;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #101010;
+          color: #e0e0e0;
+        }
+      }
+      main {
+        display: grid;
+        gap: 1.5em;
+        padding: 2em;
+        place-items: center;
+        text-align: center;
+        max-width: 32em;
+      }
+      h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #e11d48;
+      }
+      p {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: #4b5563;
+      }
+      @media (prefers-color-scheme: dark) {
+        p { color: #9ca3af; }
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        background: #fee2e2;
+        color: #991b1b;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="badge">HTTP 429</div>
+      <h1>Too Many Requests</h1>
+      <p>
+        You have exceeded the request rate limit for this survey.
+        Please wait a moment before trying again.
+      </p>
+    </main>
+  </body>
+</html>

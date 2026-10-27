@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_26_120700) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_120800) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -66,6 +66,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_26_120700) do
     t.index ["survey_id"], name: "index_submissions_on_survey_id"
   end
 
+  create_table "survey_daily_metrics", force: :cascade do |t|
+    t.bigint "survey_id", null: false
+    t.date "date", null: false
+    t.integer "response_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["date"], name: "index_survey_daily_metrics_on_date"
+    t.index ["survey_id", "date"], name: "index_survey_daily_metrics_on_survey_id_and_date", unique: true
+    t.index ["survey_id"], name: "index_survey_daily_metrics_on_survey_id"
+  end
+
   create_table "surveys", force: :cascade do |t|
     t.bigint "customer_id", null: false
     t.string "title", null: false
@@ -98,6 +109,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_26_120700) do
   add_foreign_key "question_options", "questions", on_delete: :cascade
   add_foreign_key "questions", "surveys", on_delete: :cascade
   add_foreign_key "submissions", "surveys", on_delete: :cascade
+  add_foreign_key "survey_daily_metrics", "surveys", on_delete: :cascade
   add_foreign_key "surveys", "customers", on_delete: :cascade
   add_foreign_key "users", "customers", on_delete: :cascade
 end

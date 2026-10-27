@@ -265,24 +265,95 @@ Customer
 
 ---
 
-## Analytics Architecture
+## Scalable Analytics Architecture
 
-The analytics engine executes direct SQL aggregations in PostgreSQL without hydrating memory-heavy ActiveRecord objects:
+To maintain sub-millisecond response times under high-volume production datasets (e.g., hundreds of thousands or millions of submissions), analytics calculations are decoupled from raw submission table scans:
+
+### 1. `survey_daily_metrics` Aggregation Table
+Daily response counts are pre-aggregated in a dedicated table with composite unique indexing:
+- `survey_id` (foreign key with `on_delete: :cascade`)
+- `date` (date, indexed)
+- `response_count` (integer, default: 0)
+- Compound unique index: `[survey_id, date]`
+
+### 2. Asynchronous Job & Atomic UPSERT
+When a respondent completes a survey, the submission transaction commits first. An `after_commit, on: :create` lifecycle callback enqueues `UpdateSurveyDailyMetricJob`:
 
 ```ruby
-@daily_responses = current_customer.submissions
-  .where("submissions.submitted_at >= ?", 90.days.ago.beginning_of_day)
-  .where("submissions.submitted_at <= ?", Date.current.end_of_day)
-  .group("DATE(submissions.submitted_at)")
-  .order("DATE(submissions.submitted_at) DESC")
-  .count
+# In app/models/submission.rb
+after_commit :enqueue_daily_metric_update, on: :create
+
+def enqueue_daily_metric_update
+  UpdateSurveyDailyMetricJob.perform_later(survey_id, (submitted_at || Time.current).to_date.to_s)
+end
 ```
 
-The user interface displays:
-- Summary cards (Total 90-day responses, Active days, Daily average, Peak day).
-- Visual SVG/CSS bar timeline.
-- Detailed daily breakdown table with volume distribution bars.
-- Response distribution grouped by survey.
+The job executes a PostgreSQL atomic `UPSERT` to guarantee zero lost updates even under high concurrency:
+
+```sql
+INSERT INTO survey_daily_metrics (survey_id, date, response_count, created_at, updated_at)
+VALUES ($1, $2, 1, NOW(), NOW())
+ON CONFLICT (survey_id, date)
+DO UPDATE SET response_count = survey_daily_metrics.response_count + 1,
+              updated_at = NOW();
+```
+
+### 3. Analytics Dashboard Query
+`AnalyticsController#index` queries pre-aggregated `survey_daily_metrics` buckets scoped strictly through `current_customer`:
+
+```ruby
+@daily_responses = current_customer.survey_daily_metrics
+                                   .where(date: @start_date..@end_date)
+                                   .group(:date)
+                                   .order(date: :desc)
+                                   .sum(:response_count)
+```
+
+This ensures dashboard page loads remain $O(\text{days})$ rather than $O(\text{submissions})$ without scanning raw submissions or answers tables.
+
+### 4. Historical Data Backfill Task
+An idempotent rake task is provided to backfill or reconcile pre-aggregated metrics from raw historical submissions:
+
+```bash
+bin/rails analytics:backfill
+```
+
+Running this task multiple times is safe and produces identical metric counts with zero duplicate records.
+
+---
+
+## Public Endpoint Rate Limiting & Privacy
+
+To protect public endpoints against automated form-spamming bots, ballot-box stuffing, and DoS attacks, the application incorporates Rails 8 native `ActionController::RateLimiting`:
+
+### 1. Protected Endpoints & Configured Limits
+- **Public Survey Viewing (`GET /s/:public_token`)**: Rate-limited to **60 requests/minute**.
+- **Public Survey Submission (`POST /s/:public_token`)**: Rate-limited to **10 submissions/minute**.
+- **Confirmation View (`GET /s/:public_token/success`)**: Rate-limited to **60 requests/minute**.
+
+*Internal authenticated tenant routes (`/dashboard`, `/surveys`, `/analytics`) are not subject to these public limits.*
+
+### 2. Scoped Rate-Limit Identity
+Rate limits are scoped to the combination of client IP and survey token:
+
+```ruby
+rate_limit to: 10, within: 1.minute,
+           by: -> { "#{request.remote_ip}:#{params[:public_token]}" },
+           with: :render_rate_limited,
+           only: :submit
+```
+
+This prevents cross-survey denial of service: if an abusive client reaches the limit on Survey A, legitimate traffic to Survey B is never throttled.
+
+### 3. Durability & Multi-Instance Clustered Storage
+In production, rate-limiting counters are backed by `SolidCache` (`config.cache_store = :solid_cache_store`), ensuring that rate limits are shared across multiple Puma processes or multi-instance container replicas.
+
+### 4. Response & Privacy Safeguards
+When a limit is exceeded:
+- Responds with `HTTP 429 Too Many Requests`.
+- Sets standard header `Retry-After: 60`.
+- Renders responsive standalone `public/429.html` with informative guidance.
+- **Privacy Guarantee**: Client IPs are only used temporarily within the cache TTL; no permanent IP tracking or respondent logging databases are retained.
 
 ---
 

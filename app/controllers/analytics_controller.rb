@@ -5,23 +5,28 @@ class AnalyticsController < ApplicationController
     @start_date = 90.days.ago.to_date
     @end_date = Date.current
 
-    # Database-level aggregation strictly scoped to current_customer
-    @daily_responses = current_customer.submissions
-                                       .where("submissions.submitted_at >= ?", @start_date.beginning_of_day)
-                                       .where("submissions.submitted_at <= ?", @end_date.end_of_day)
-                                       .group("DATE(submissions.submitted_at)")
-                                       .order("DATE(submissions.submitted_at) DESC")
-                                       .count
+    # Read pre-aggregated daily metrics strictly scoped to current_customer.
+    # No full-table scans or expensive group-by aggregations on raw submissions table.
+    @daily_responses = current_customer.survey_daily_metrics
+                                       .where(date: @start_date..@end_date)
+                                       .group(:date)
+                                       .order(date: :desc)
+                                       .sum(:response_count)
 
     @total_responses = @daily_responses.values.sum
     @active_days_count = @daily_responses.count
     @average_daily_responses = (@total_responses.to_f / 90).round(2)
     @peak_day = @daily_responses.max_by { |_date, count| count }
 
-    @surveys_summary = current_customer.surveys
-                                       .left_joins(:submissions)
-                                       .group("surveys.id, surveys.title, surveys.status")
-                                       .select("surveys.id, surveys.title, surveys.status, COUNT(submissions.id) AS submissions_count")
-                                       .order("submissions_count DESC")
+    # Per-survey response counts read from pre-aggregated daily metrics
+    survey_counts = current_customer.survey_daily_metrics
+                                    .group(:survey_id)
+                                    .sum(:response_count)
+
+    @surveys_summary = current_customer.surveys.select(:id, :title, :status).map do |survey|
+      count = survey_counts[survey.id] || 0
+      survey.define_singleton_method(:submissions_count) { count }
+      survey
+    end.sort_by { |s| -s.submissions_count }
   end
 end

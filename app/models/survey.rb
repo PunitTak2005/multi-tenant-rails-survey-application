@@ -3,6 +3,7 @@ class Survey < ApplicationRecord
   has_many :questions, -> { order(position: :asc) }, dependent: :destroy, inverse_of: :survey
   has_many :submissions, dependent: :destroy
   has_many :answers, through: :submissions
+  has_many :daily_metrics, class_name: "SurveyDailyMetric", dependent: :destroy
 
   accepts_nested_attributes_for :questions, allow_destroy: true, reject_if: :all_blank
 

@@ -5,6 +5,7 @@ class Submission < ApplicationRecord
   validates :submitted_at, presence: true
 
   before_validation :set_submitted_at, on: :create
+  after_commit :enqueue_daily_metric_update, on: :create
 
   scope :recent, -> { order(submitted_at: :desc) }
 
@@ -12,5 +13,10 @@ class Submission < ApplicationRecord
 
   def set_submitted_at
     self.submitted_at ||= Time.current
+  end
+
+  def enqueue_daily_metric_update
+    date_val = (submitted_at || Time.current).to_date.to_s
+    UpdateSurveyDailyMetricJob.perform_later(survey_id, date_val)
   end
 end
