@@ -1,6 +1,7 @@
 puts "==> Starting database seed process..."
 
 # Clear existing seed data cleanly in order of dependencies
+SurveyDailyMetric.delete_all
 Answer.delete_all
 Submission.delete_all
 QuestionOption.delete_all
@@ -204,6 +205,12 @@ total_beta_submissions = 0
   )
   total_beta_submissions += 1
 end
+
+# Ensure pre-aggregated daily metrics are 100% in sync with historical submissions
+puts "--> Synchronizing survey daily metrics..."
+Rails.application.load_tasks unless Rake::Task.task_defined?("analytics:backfill")
+Rake::Task["analytics:backfill"].reenable
+Rake::Task["analytics:backfill"].invoke
 
 puts "✓ Successfully seeded:"
 puts "  - Customer Acme Corporation: #{acme.surveys.count} surveys, #{total_acme_submissions} submissions"
