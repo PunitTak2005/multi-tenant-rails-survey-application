@@ -498,4 +498,139 @@ class Requirement3SubmissionsPageTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Survey A1 - Product Feedback"
     assert_not_includes response.body, "Survey B1 - Market Analysis"
   end
+
+  # =========================================================================
+  # 11. Dedicated Pagination Tests (Part 1, Sections 1-12)
+  # =========================================================================
+
+  test "pagination limits results to default page size (20) and shows navigation controls" do
+    sign_in_as(@user_a)
+
+    # Add 25 submissions to Survey A1 (total = 28 submissions)
+    25.times do |i|
+      sub = @survey_a1.submissions.create!(submitted_at: (5 + i).hours.ago)
+      sub.answers.create!(question: @q_text, text_value: "Bulk #{i}")
+    end
+
+    get survey_submissions_path(@survey_a1, page: 1)
+    assert_response :success
+
+    # Page 1 contains exactly 20 rows
+    assert_includes response.body, "Showing <strong>1&ndash;20</strong> of <strong>28</strong> submissions"
+    assert_includes response.body, "Page <strong>1</strong> of <strong>2</strong>"
+    assert_includes response.body, "Next &rarr;"
+    assert_includes response.body, "pagination-prev-disabled"
+  end
+
+  test "pagination page navigation loads distinct disjoint subsets across pages" do
+    sign_in_as(@user_a)
+
+    # Ensure 25 submissions
+    created_ids = []
+    25.times do |i|
+      sub = @survey_a1.submissions.create!(submitted_at: (10 + i).minutes.ago)
+      sub.answers.create!(question: @q_text, text_value: "Batch #{i}")
+      created_ids << sub.id
+    end
+
+    # Fetch Page 1
+    get survey_submissions_path(@survey_a1, page: 1)
+    assert_response :success
+    page1_html = response.body
+
+    # Fetch Page 2
+    get survey_submissions_path(@survey_a1, page: 2)
+    assert_response :success
+    page2_html = response.body
+
+    assert_includes page2_html, "Showing <strong>21&ndash;28</strong> of <strong>28</strong> submissions"
+    assert_includes page2_html, "Page <strong>2</strong> of <strong>2</strong>"
+    assert_includes page2_html, "&larr; Previous"
+    assert_includes page2_html, "pagination-next-disabled"
+
+    # Verify Page 1 and Page 2 records are completely disjoint
+    created_ids.each do |sub_id|
+      in_page1 = page1_html.include?("##{sub_id}")
+      in_page2 = page2_html.include?("##{sub_id}")
+      assert in_page1 ^ in_page2, "Submission ##{sub_id} should appear in either Page 1 or Page 2, not both or neither!"
+    end
+  end
+
+  test "pagination beyond last page renders safe empty result without exception" do
+    sign_in_as(@user_a)
+
+    get survey_submissions_path(@survey_a1, page: 999)
+    assert_response :success
+
+    # Safely displays empty table with zero records rendered
+    assert_not_includes response.body, "ActiveRecord::RecordNotFound"
+    assert_not_includes response.body, "Pagy::OptionError"
+  end
+
+  test "pagination sanitizes invalid page parameters safely" do
+    sign_in_as(@user_a)
+
+    # Non-numeric string
+    get survey_submissions_path(@survey_a1, page: "abc")
+    assert_response :success
+    assert_includes response.body, "Survey Responses"
+
+    # Zero
+    get survey_submissions_path(@survey_a1, page: 0)
+    assert_response :success
+
+    # Negative
+    get survey_submissions_path(@survey_a1, page: -5)
+    assert_response :success
+
+    # Empty string
+    get survey_submissions_path(@survey_a1, page: "")
+    assert_response :success
+  end
+
+  test "pagination enforces maximum limit cap and prevents arbitrary huge per_page loads" do
+    sign_in_as(@user_a)
+
+    # Attempt to request 100,000 items per page
+    get survey_submissions_path(@survey_a1, per_page: 100_000)
+    assert_response :success
+
+    # Capped at MAX_PER_PAGE (100)
+    assert_includes response.body, "Survey Responses"
+  end
+
+  test "pagination strictly enforces tenant isolation across pages" do
+    sign_in_as(@user_a)
+
+    # Attempt to access page 2 of Customer B's survey
+    get survey_submissions_path(@survey_b1, page: 2)
+    assert_redirected_to surveys_path
+    follow_redirect!
+    assert_includes flash[:alert], "Survey not found."
+  end
+
+  test "pagination with large dataset (100 submissions) calculates exact page counts and bounds" do
+    sign_in_as(@user_a)
+
+    # Add 100 submissions
+    100.times do |i|
+      sub = @survey_a1.submissions.create!(submitted_at: (i + 1).days.ago)
+      sub.answers.create!(question: @q_text, text_value: "Large #{i}")
+    end
+
+    total = @survey_a1.submissions.count # 103 total (3 initial + 100)
+    expected_pages = (total / 20.0).ceil # 6 pages
+
+    # Page 1
+    get survey_submissions_path(@survey_a1, page: 1)
+    assert_response :success
+    assert_includes response.body, "Showing <strong>1&ndash;20</strong> of <strong>#{total}</strong> submissions"
+    assert_includes response.body, "Page <strong>1</strong> of <strong>#{expected_pages}</strong>"
+
+    # Page 6 (final page)
+    get survey_submissions_path(@survey_a1, page: expected_pages)
+    assert_response :success
+    assert_includes response.body, "Showing <strong>101&ndash;#{total}</strong> of <strong>#{total}</strong> submissions"
+    assert_includes response.body, "Page <strong>#{expected_pages}</strong> of <strong>#{expected_pages}</strong>"
+  end
 end

@@ -6,7 +6,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
       <div>
         <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main);">Survey Responses</h1>
-        <p style="color: var(--text-muted); font-size: 0.95rem;">Submissions for: <strong><%= @survey.title %></strong> (<%= @submissions.size %> total)</p>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Submissions for: <strong><%= @survey.title %></strong> (<%= @pagy.count %> total)</p>
       </div>
       <% if @survey.published? %>
         <%= link_to "Open Public Survey", public_survey_path(@survey.public_token), target: "_blank", class: "btn btn-secondary btn-sm" %>
@@ -15,7 +15,14 @@
   </div>
 
   <div class="card">
-    <% if @submissions.any? %>
+    <% if @pagy.count > 0 %>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; color: var(--text-muted); background: #f8fafc;">
+        <span class="pagination-summary">Showing <strong><%= @pagy.from %>&ndash;<%= @pagy.to %></strong> of <strong><%= @pagy.count %></strong> submissions</span>
+        <% if @pagy.last > 1 %>
+          <span class="pagination-page-indicator">Page <strong><%= @pagy.page %></strong> of <strong><%= @pagy.last %></strong></span>
+        <% end %>
+      </div>
+
       <div class="table-responsive">
         <table class="table">
           <thead>
@@ -52,6 +59,37 @@
           </tbody>
         </table>
       </div>
+
+      <% if @pagy.last > 1 %>
+        <nav class="pagination-bar" aria-label="Submissions pagination" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-top: 1px solid var(--border); background: #f8fafc;">
+          <div>
+            <% if @pagy.previous %>
+              <%= link_to "&larr; Previous".html_safe, survey_submissions_path(@survey, page: @pagy.previous), class: "btn btn-secondary btn-sm pagination-prev" %>
+            <% else %>
+              <span class="btn btn-secondary btn-sm disabled pagination-prev-disabled" style="opacity: 0.5; pointer-events: none;">&larr; Previous</span>
+            <% end %>
+          </div>
+
+          <div style="display: flex; gap: 0.35rem; align-items: center;" class="pagination-pages">
+            <% (1..@pagy.last).each do |p_num| %>
+              <% if p_num == @pagy.page %>
+                <span class="btn btn-primary btn-sm pagination-current" style="pointer-events: none;"><%= p_num %></span>
+              <% else %>
+                <%= link_to p_num.to_s, survey_submissions_path(@survey, page: p_num), class: "btn btn-secondary btn-sm pagination-page" %>
+              <% end %>
+            <% end %>
+          </div>
+
+          <div>
+            <% if @pagy.next %>
+              <%= link_to "Next &rarr;".html_safe, survey_submissions_path(@survey, page: @pagy.next), class: "btn btn-secondary btn-sm pagination-next" %>
+            <% else %>
+              <span class="btn btn-secondary btn-sm disabled pagination-next-disabled" style="opacity: 0.5; pointer-events: none;">Next &rarr;</span>
+            <% end %>
+          </div>
+        </nav>
+      <% end %>
+
     <% else %>
       <div class="empty-state">
         <div class="empty-state-icon">📥</div>
