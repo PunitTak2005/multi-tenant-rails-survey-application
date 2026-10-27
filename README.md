@@ -334,7 +334,19 @@ DO UPDATE SET response_count = survey_daily_metrics.response_count + 1,
 
 This ensures dashboard page loads remain $O(\text{days})$ rather than $O(\text{submissions})$ without scanning raw submissions or answers tables.
 
-### 4. Historical Data Backfill Task
+### 4. Interactive Date Range Filters
+The Analytics dashboard (`GET /analytics`) provides flexible date filtering while preserving default 90-day behavior:
+- **Default Range**: Last 90 days (`range=90d`)
+- **Available Presets**:
+  - `Last 30 days` (`?range=30d`)
+  - `Last 90 days` (`?range=90d`)
+  - `Year to date` (`?range=ytd`): From January 1 of the current year through today
+  - `All time` (`?range=all`): Entire customer history from earliest recorded submission
+- **Custom Date Range**:
+  - `?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD`: Inclusive calendar date boundaries
+  - Safe error handling: invalid date strings, inverted ranges (`start_date > end_date`), or missing dates cleanly fall back to the default 90-day window with an informative flash notice.
+
+### 5. Historical Data Backfill Task
 An idempotent rake task is provided to backfill or reconcile pre-aggregated metrics from raw historical submissions:
 
 ```bash

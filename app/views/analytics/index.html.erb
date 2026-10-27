@@ -5,7 +5,7 @@
     <div>
       <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main);"><%= current_customer.name %> Analytics</h1>
       <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.2rem;">
-        Survey response volume and activity over the last 90 days (<%= @start_date.strftime("%b %d, %Y") %> &ndash; <%= @end_date.strftime("%b %d, %Y") %>)
+        Survey response volume and activity <%= @range_label %> (<%= @start_date.strftime("%b %d, %Y") %> &ndash; <%= @end_date.strftime("%b %d, %Y") %>)
       </p>
     </div>
     <div class="btn-group">
@@ -14,9 +14,36 @@
     </div>
   </div>
 
+  <%# Date Range Filter Controls %>
+  <div class="card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-right: 0.25rem;">Date range:</span>
+        <%= link_to "Last 30 days", analytics_path(range: "30d"), class: "btn btn-sm #{@selected_range == '30d' ? 'btn-primary' : 'btn-secondary'}", id: "filter-range-30d" %>
+        <%= link_to "Last 90 days", analytics_path(range: "90d"), class: "btn btn-sm #{@selected_range == '90d' ? 'btn-primary' : 'btn-secondary'}", id: "filter-range-90d" %>
+        <%= link_to "Year to date", analytics_path(range: "ytd"), class: "btn btn-sm #{@selected_range == 'ytd' ? 'btn-primary' : 'btn-secondary'}", id: "filter-range-ytd" %>
+        <%= link_to "All time", analytics_path(range: "all"), class: "btn btn-sm #{@selected_range == 'all' ? 'btn-primary' : 'btn-secondary'}", id: "filter-range-all" %>
+      </div>
+
+      <%= form_with url: analytics_path, method: :get, local: true, style: "display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;" do |f| %>
+        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-right: 0.15rem;">Custom:</span>
+        <label for="start_date" style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted);">From</label>
+        <%= f.date_field :start_date, value: (@start_date.iso8601 if @selected_range == 'custom'), class: "form-control", style: "padding: 0.35rem 0.5rem; font-size: 0.85rem; width: auto;", id: "start_date", required: true, aria: { label: "Start Date" } %>
+
+        <label for="end_date" style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted);">To</label>
+        <%= f.date_field :end_date, value: (@end_date.iso8601 if @selected_range == 'custom'), class: "form-control", style: "padding: 0.35rem 0.5rem; font-size: 0.85rem; width: auto;", id: "end_date", required: true, aria: { label: "End Date" } %>
+
+        <%= f.submit "Apply", class: "btn btn-sm btn-secondary", style: "padding: 0.35rem 0.75rem;", id: "apply-custom-range" %>
+        <% if @selected_range == "custom" %>
+          <%= link_to "Reset", analytics_path, class: "btn btn-sm btn-outline", style: "padding: 0.35rem 0.5rem; color: var(--text-muted); font-size: 0.8rem;" %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-label">Total 90-Day Responses</div>
+      <div class="stat-label"><%= @total_label %></div>
       <div class="stat-value" style="color: var(--primary);"><%= @total_responses %></div>
       <div class="stat-desc">Scoped to <%= current_customer.name %></div>
     </div>
@@ -30,7 +57,7 @@
     <div class="stat-card">
       <div class="stat-label">Daily Average</div>
       <div class="stat-value" style="color: #0891b2;"><%= @average_daily_responses %></div>
-      <div class="stat-desc">Responses / day across 90 days</div>
+      <div class="stat-desc">Responses / day across <%= @selected_range == '90d' ? '90' : @days_count %> days</div>
     </div>
 
     <div class="stat-card">
@@ -52,25 +79,33 @@
     <div class="card">
       <div class="card-header">
         <div>
-          <h2 class="card-title">Daily Response Volume (Past 90 Days)</h2>
+          <h2 class="card-title"><%= @timeline_title %></h2>
           <p class="card-subtitle">Visual timeline of respondent submissions</p>
         </div>
       </div>
 
       <div style="padding: 1rem 0;">
         <div class="chart-container">
-          <%# Show daily bars %>
-          <% (@start_date..@end_date).each do |date| %>
-            <% count = @daily_responses[date] || 0 %>
-            <% height_pct = max_count > 0 ? [(count.to_f / max_count * 100).round, 4].max : 4 %>
-            <div class="chart-bar-col" title="<%= date.strftime('%b %d, %Y') %>: <%= count %> responses">
-              <div class="chart-bar" style="height: <%= count > 0 ? height_pct : 2 %>%; <%= count > 0 ? '' : 'background: #e2e8f0;' %>"></div>
-            </div>
+          <% if (@end_date - @start_date).to_i <= 180 %>
+            <% (@start_date..@end_date).each do |date| %>
+              <% count = @daily_responses[date] || 0 %>
+              <% height_pct = max_count > 0 ? [ (count.to_f / max_count * 100).round, 4 ].max : 4 %>
+              <div class="chart-bar-col" title="<%= date.strftime('%b %d, %Y') %>: <%= count %> responses">
+                <div class="chart-bar" style="height: <%= count > 0 ? height_pct : 2 %>%; <%= count > 0 ? '' : 'background: #e2e8f0;' %>"></div>
+              </div>
+            <% end %>
+          <% else %>
+            <% @daily_responses.each do |date, count| %>
+              <% height_pct = max_count > 0 ? [ (count.to_f / max_count * 100).round, 4 ].max : 4 %>
+              <div class="chart-bar-col" title="<%= date.strftime('%b %d, %Y') %>: <%= count %> responses">
+                <div class="chart-bar" style="height: <%= count > 0 ? height_pct : 2 %>%; <%= count > 0 ? '' : 'background: #e2e8f0;' %>"></div>
+              </div>
+            <% end %>
           <% end %>
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; padding: 0 0.5rem;">
           <span><%= @start_date.strftime("%b %d, %Y") %></span>
-          <span>Timeline (90 Days)</span>
+          <span><%= @timeline_desc %></span>
           <span><%= @end_date.strftime("%b %d, %Y") %></span>
         </div>
       </div>
@@ -162,7 +197,7 @@
     <div class="card">
       <div class="empty-state">
         <div class="empty-state-icon">📊</div>
-        <h3>No response data in the last 90 days</h3>
+        <h3><%= @empty_state_title %></h3>
         <p>Once respondents complete your customer surveys, daily response analytics will be automatically calculated here.</p>
         <%= link_to "View Surveys", surveys_path, class: "btn btn-primary" %>
       </div>
