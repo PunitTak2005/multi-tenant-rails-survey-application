@@ -111,4 +111,26 @@ class TenantIsolationTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Beta Secret Survey"
     assert_not_includes response.body, "Alpha Secret Survey"
   end
+
+  test "ownership parameter tampering: customer_id cannot be mass-assigned to create resource for another customer" do
+    sign_in_as(@user_a)
+
+    assert_difference -> { @customer_a.surveys.count }, 1 do
+      assert_no_difference -> { @customer_b.surveys.count } do
+        post surveys_path, params: {
+          survey: {
+            title: "Tampered Survey",
+            customer_id: @customer_b.id,
+            questions_attributes: {
+              "0" => { question_text: "Q?", question_type: "text", position: 1 }
+            }
+          }
+        }
+      end
+    end
+
+    created_survey = Survey.find_by(title: "Tampered Survey")
+    assert_equal @customer_a.id, created_survey.customer_id
+    refute_equal @customer_b.id, created_survey.customer_id
+  end
 end

@@ -103,18 +103,41 @@ Generate realistic seed data featuring 2 separate customer tenants, users, surve
 bin/rails db:seed
 ```
 
-### 6. Create or Provision Initial Customer Admin (Rake Task)
+### 6. Initial Customer & User Setup (Rake Tasks)
 
-You can also provision a fresh customer and administrative user via environment variables:
+The application provides dedicated, idempotent Rake tasks to provision initial customer tenants and users for development and testing:
+
+#### Option A: Quick Dual-Tenant Setup (Recommended for testing isolation)
+Provisions two complete customer tenants (`Acme Corporation` and `Beta Technologies`) with credentials ready for immediate login:
 
 ```bash
-INITIAL_CUSTOMER_NAME="Acme Inc" \
-INITIAL_USER_EMAIL="admin@acme.test" \
+bin/rails customers:setup
+```
+
+Output:
+```text
+Tenant A: Acme Corporation
+  Email   : admin@acme.test
+  Password: ChangeMe123!
+
+Tenant B: Beta Technologies
+  Email   : beta@beta.test
+  Password: ChangeMe123!
+```
+
+#### Option B: Custom Single Customer & User Provisioning
+You can also provision a custom customer tenant and administrator via environment variables:
+
+```bash
+INITIAL_CUSTOMER_NAME="Custom Corp" \
+INITIAL_USER_EMAIL="admin@custom.test" \
 INITIAL_USER_PASSWORD="ChangeMe123!" \
 bin/rails customers:create_initial
 ```
 
-This task safely idempotently creates or updates the user and prints the login credentials to stdout.
+Both tasks are strictly idempotent: re-running them will safely update existing records without creating duplicate customers or users.
+
+> **Note on Scope**: User administration UI, user invitation workflows, and multi-user management screens within the dashboard are intentionally out of scope for this focused SaaS core. Initial tenants and users are managed via these designated Rake tasks and seeds.
 
 ---
 
